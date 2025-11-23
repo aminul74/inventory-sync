@@ -1,0 +1,23 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "23ae16772956ab6b88223624b2afc9d2"
+name = "smart-delivery-scheduler"
+application_url = "https://hybridizable-unfructified-emelia.ngrok-free.dev/"
+embedded = true
+handle = "smart-delivery-scheduler"
+
+[webhooks]
+api_version = "2025-07"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_locations,read_products,read_themes,write_inventory,write_products"
+
+[auth]
+redirect_urls = [
+  "https://hybridizable-unfructified-emelia.ngrok-free.dev/authenticate",
+  "https://hybridizable-unfructified-emelia.ngrok-free.dev/authenticate/token"
+]
+
+[pos]
+embedded = false
