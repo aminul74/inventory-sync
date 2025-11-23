@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\GoogleSheet;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class SheetExportService
 {
@@ -15,9 +16,12 @@ class SheetExportService
     public function exportProducts(array $fields = null): array
     {
         $user = Auth::user();
+        Log::info('SheetExportService: Starting export', ['user_id' => $user->id]);
+
         $sheet = GoogleSheet::where('user_id', $user->id)->first();
 
         if (!$sheet) {
+            Log::error('SheetExportService: No sheet connected', ['user_id' => $user->id]);
             return ['success' => false, 'error' => 'No sheet connected'];
         }
 
@@ -38,21 +42,31 @@ class SheetExportService
 
         $selectedFields = $fields ?? $defaultFields;
 
-        $allProducts = $this->fetchAllProducts();
-        $rows = $this->formatProductsForExport($allProducts, $selectedFields);
+        try {
+            $allProducts = $this->fetchAllProducts();
+            Log::info('SheetExportService: Fetched products', ['count' => count($allProducts)]);
 
-        array_unshift($rows, $selectedFields);
+            $rows = $this->formatProductsForExport($allProducts, $selectedFields);
+            Log::info('SheetExportService: Formatted rows', ['count' => count($rows)]);
 
-        $range = 'Products!A1';
-        $this->googleSheetsService->clearSheet($sheet->sheet_id, 'Products!A:Z', $user->id);
-        $success = $this->googleSheetsService->updateSheet($sheet->sheet_id, $range, $rows, $user->id);
+            array_unshift($rows, $selectedFields);
 
-        if ($success) {
-            $sheet->update(['sync_at' => now()]);
-            return ['success' => true, 'message' => 'Products exported successfully'];
+            $range = 'Products!A1';
+            $this->googleSheetsService->clearSheet($sheet->sheet_id, 'Products!A:Z', $user->id);
+            $success = $this->googleSheetsService->updateSheet($sheet->sheet_id, $range, $rows, $user->id);
+
+            if ($success) {
+                $sheet->update(['sync_at' => now()]);
+                Log::info('SheetExportService: Export successful');
+                return ['success' => true, 'message' => 'Products exported successfully'];
+            }
+
+            Log::error('SheetExportService: Update sheet failed');
+            return ['success' => false, 'error' => 'Failed to export products'];
+        } catch (\Exception $e) {
+            Log::error('SheetExportService: Export exception', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return ['success' => false, 'error' => 'Failed to export products: ' . $e->getMessage()];
         }
-
-        return ['success' => false, 'error' => 'Failed to export products'];
     }
 
     private function fetchAllProducts(): array
@@ -61,14 +75,56 @@ class SheetExportService
         $after = null;
 
         do {
-            $result = $this->productsService->getProducts(null, $after);
-            if (!empty($result['products'])) {
-                $allProducts = array_merge($allProducts, $result['products']);
+            $query = $this->getExportQuery($after);
+            $result = \App\Lib\ShopifyClient::queryOrException($query);
+
+            if (!empty($result['products']['edges'])) {
+                foreach ($result['products']['edges'] as $edge) {
+                    $allProducts[] = $edge['node'];
+                }
             }
-            $after = $result['pageInfo']['hasNextPage'] ?? false ? ($result['pageInfo']['endCursor'] ?? null) : null;
+
+            $hasNextPage = $result['products']['pageInfo']['hasNextPage'] ?? false;
+            $after = $hasNextPage ? ($result['products']['pageInfo']['endCursor'] ?? null) : null;
         } while ($after);
 
         return $allProducts;
+    }
+
+    private function getExportQuery(?string $after): string
+    {
+        $paginationPart = $after ? 'first: 50, after: "' . $after . '"' : 'first: 50';
+
+        return '{
+            products(' . $paginationPart . ') {
+                edges {
+                    node {
+                        id
+                        title
+                        vendor
+                        status
+                        tags
+                        variants(first: 100) {
+                            edges {
+                                node {
+                                    id
+                                    sku
+                                    price
+                                    barcode
+                                    inventoryQuantity
+                                    availableForSale
+                                }
+                            }
+                        }
+                    }
+                    cursor
+                }
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+            }
+        }';
     }
 
     private function formatProductsForExport(array $products, array $fields): array
@@ -76,24 +132,29 @@ class SheetExportService
         $rows = [];
 
         foreach ($products as $product) {
-            foreach ($product['variants'] ?? [] as $variant) {
+            $variants = $product['variants']['edges'] ?? [];
+            Log::info('SheetExportService: Product variants', ['product_id' => $product['id'] ?? 'unknown', 'variant_count' => count($variants)]);
+
+            foreach ($variants as $variantEdge) {
+                $variant = $variantEdge['node'] ?? [];
                 $row = [];
                 foreach ($fields as $field) {
-                    $row[] = match ($field) {
-                        'Product id' => $product['id'] ?? '',
-                        'Variant id' => $variant['id'] ?? '',
-                        'Title' => $product['title'] ?? '',
-                        'Variant SKU' => $variant['sku'] ?? '',
-                        'Price' => $variant['price'] ?? '',
-                        'Inventory quantity' => $variant['inventoryQuantity'] ?? 0,
-                        'On hand' => $variant['inventoryQuantity'] ?? 0,
-                        'Available' => $variant['availableForSale'] ?? false ? 'Yes' : 'No',
-                        'Barcode' => $variant['barcode'] ?? '',
-                        'Vendor' => $product['vendor'] ?? '',
-                        'Status' => $product['status'] ?? '',
-                        'Tags' => implode(', ', $product['tags'] ?? []),
-                        default => '',
+                    $value = match ($field) {
+                        'Product id' => $product['id'] ?? 'N/A',
+                        'Variant id' => $variant['id'] ?? 'N/A',
+                        'Title' => $product['title'] ?? 'N/A',
+                        'Variant SKU' => !empty($variant['sku']) ? $variant['sku'] : 'N/A',
+                        'Price' => !empty($variant['price']) ? $variant['price'] : 'N/A',
+                        'Inventory quantity' => isset($variant['inventoryQuantity']) ? (string)$variant['inventoryQuantity'] : '0',
+                        'On hand' => isset($variant['inventoryQuantity']) ? (string)$variant['inventoryQuantity'] : '0',
+                        'Available' => isset($variant['availableForSale']) ? ($variant['availableForSale'] ? 'Yes' : 'No') : 'N/A',
+                        'Barcode' => !empty($variant['barcode']) ? $variant['barcode'] : 'N/A',
+                        'Vendor' => !empty($product['vendor']) ? $product['vendor'] : 'N/A',
+                        'Status' => !empty($product['status']) ? $product['status'] : 'N/A',
+                        'Tags' => !empty($product['tags']) ? implode(', ', $product['tags']) : 'N/A',
+                        default => 'N/A',
                     };
+                    $row[] = $value;
                 }
                 $rows[] = $row;
             }

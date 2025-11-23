@@ -7,6 +7,7 @@ use App\Services\SheetExportService;
 use App\Services\SheetImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SheetController extends Controller
 {
@@ -41,20 +42,26 @@ class SheetController extends Controller
 
     public function exportProducts(Request $request): JsonResponse
     {
+        Log::info('SheetController: Export products called');
         $fields = $request->input('fields');
         $result = $this->exportService->exportProducts($fields);
+        Log::info('SheetController: Export result', ['success' => $result['success']]);
         return response()->json($result, $result['success'] ? 200 : 400);
     }
 
     public function importProducts(): JsonResponse
     {
+        Log::info('SheetController: Import products called');
         $result = $this->importService->importFromSheet();
+        Log::info('SheetController: Import result', ['success' => $result['success']]);
         return response()->json($result, $result['success'] ? 200 : 400);
     }
 
     public function syncProducts(Request $request): JsonResponse
     {
+        Log::info('SheetController: Sync products called');
         $result = $this->exportService->exportProducts();
+        Log::info('SheetController: Sync result', ['success' => $result['success']]);
         return response()->json($result, $result['success'] ? 200 : 400);
     }
 }

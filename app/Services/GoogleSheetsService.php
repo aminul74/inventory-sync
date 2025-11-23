@@ -136,10 +136,18 @@ class GoogleSheetsService
     {
         $accessToken = $this->getAccessToken($userId);
         if (!$accessToken) {
+            Log::error('GoogleSheetsService: No access token for updateSheet', ['user_id' => $userId]);
             return false;
         }
 
         try {
+            Log::info('GoogleSheetsService: Updating sheet', [
+                'sheet_id' => $sheetId,
+                'range' => $range,
+                'rows_count' => count($values),
+                'user_id' => $userId
+            ]);
+
             $this->client->put(self::SHEETS_API_BASE . "/{$sheetId}/values/{$range}", [
                 'headers' => [
                     'Authorization' => "Bearer {$accessToken}",
@@ -153,8 +161,17 @@ class GoogleSheetsService
                 ],
             ]);
 
+            Log::info('GoogleSheetsService: Sheet updated successfully');
             return true;
         } catch (\Exception $e) {
+            Log::error('GoogleSheetsService: Update sheet exception', [
+                'error' => $e->getMessage(),
+                'sheet_id' => $sheetId,
+                'range' => $range,
+                'response' => $e instanceof \GuzzleHttp\Exception\RequestException && $e->hasResponse()
+                    ? $e->getResponse()->getBody()->getContents()
+                    : null
+            ]);
             return false;
         }
     }
@@ -184,10 +201,13 @@ class GoogleSheetsService
     {
         $accessToken = $this->getAccessToken($userId);
         if (!$accessToken) {
+            Log::error('GoogleSheetsService: No access token for clearSheet', ['user_id' => $userId]);
             return false;
         }
 
         try {
+            Log::info('GoogleSheetsService: Clearing sheet', ['sheet_id' => $sheetId, 'range' => $range]);
+
             $this->client->post(self::SHEETS_API_BASE . "/{$sheetId}/values/{$range}:clear", [
                 'headers' => [
                     'Authorization' => "Bearer {$accessToken}",
@@ -195,8 +215,15 @@ class GoogleSheetsService
                 ],
             ]);
 
+            Log::info('GoogleSheetsService: Sheet cleared successfully');
             return true;
         } catch (\Exception $e) {
+            Log::error('GoogleSheetsService: Clear sheet exception', [
+                'error' => $e->getMessage(),
+                'response' => $e instanceof \GuzzleHttp\Exception\RequestException && $e->hasResponse()
+                    ? $e->getResponse()->getBody()->getContents()
+                    : null
+            ]);
             return false;
         }
     }
