@@ -1,20 +1,45 @@
 import React, { useState, useEffect } from "react";
-import { Button, Card, Text, Box, BlockStack, Divider } from "@shopify/polaris";
+import {
+    Button,
+    Card,
+    Text,
+    Box,
+    BlockStack,
+    Divider,
+    Banner,
+} from "@shopify/polaris";
+import { fetchProfile } from "../../services/api";
 
 interface DoneProps {
     onFinish: () => void;
 }
 
 const Done: React.FC<DoneProps> = ({ onFinish }) => {
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [sheetUrl, setSheetUrl] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Simulate completion
-        const timer = setTimeout(() => {
-            setIsProcessing(false);
-        }, 2000);
-        return () => clearTimeout(timer);
+        loadSheetUrl();
     }, []);
+
+    const loadSheetUrl = async () => {
+        try {
+            const result = await fetchProfile();
+            if (result.success && result.data?.profile?.sheet?.url) {
+                setSheetUrl(result.data.profile.sheet.url);
+            }
+        } catch (err) {
+            console.error("Failed to load sheet URL");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleViewSheet = () => {
+        if (sheetUrl) {
+            window.open(sheetUrl, "_blank");
+        }
+    };
 
     return (
         <Card>
@@ -23,18 +48,24 @@ const Done: React.FC<DoneProps> = ({ onFinish }) => {
                     <Box>
                         <div style={{ textAlign: "center" }}>
                             <Text variant="headingXl" as="h2">
-                                Almost Done!
+                                Setup Complete!
                             </Text>
                         </div>
                     </Box>
 
+                    <Divider />
+
+                    <Banner tone="success">
+                        Your Google Sheet is successfully connected. You can now
+                        manage product inventory sync.
+                    </Banner>
+
                     <Box>
                         <div style={{ textAlign: "center" }}>
                             <Text as="p" tone="subdued">
-                                Your export is in progress. You can continue
-                                with your tasks, and the data will be available
-                                in your Google Sheet shortly. You can check the
-                                final step once the process is complete.
+                                Your setup is complete. You can now export,
+                                import, and sync products between Shopify and
+                                Google Sheets.
                             </Text>
                         </div>
                     </Box>
@@ -105,15 +136,19 @@ const Done: React.FC<DoneProps> = ({ onFinish }) => {
                         >
                             <Button
                                 variant="secondary"
-                                onClick={() =>
-                                    (window.location.href = "/dashboard")
-                                }
+                                onClick={() => (window.location.href = "/")}
                             >
-                                Keep exporting & back to dashboard
+                                Go to Dashboard
                             </Button>
-                            <Button variant="primary" onClick={onFinish}>
-                                View on Google Sheet
-                            </Button>
+                            {sheetUrl && (
+                                <Button
+                                    variant="primary"
+                                    onClick={handleViewSheet}
+                                    disabled={isLoading}
+                                >
+                                    View Google Sheet
+                                </Button>
+                            )}
                         </div>
                     </Box>
                 </BlockStack>

@@ -2,9 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Card, Box, Text } from "@shopify/polaris";
 import Connection from "./setup/Connection";
 import SpreadsheetSetup from "./setup/SpreadsheetSetup";
-import ExportConfig from "./setup/ExportConfig";
-import AppsScriptSetup from "./setup/AppsScriptSetup";
 import Done from "./setup/Done";
+import ExportConfig from "./setup/ExportConfig";
 
 interface SetupData {
     connectionStatus?: string;
@@ -20,9 +19,8 @@ const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({
     const steps = [
         { number: 1, label: "Connection", completed: currentStep > 1 },
         { number: 2, label: "Spreadsheet", completed: currentStep > 2 },
-        { number: 3, label: "Export", completed: currentStep > 3 },
-        { number: 4, label: "Apps Script", completed: currentStep > 4 },
-        { number: 5, label: "Done", completed: currentStep > 5 },
+        { number: 3, label: "Import/Export/Sync", completed: currentStep > 3 },
+        { number: 4, label: "Done", completed: currentStep > 5 },
     ];
 
     return (
@@ -138,22 +136,8 @@ const Setup: React.FC = () => {
                     />
                 );
             case 3:
-                return (
-                    <ExportConfig
-                        onNext={handleNext}
-                        onBack={handleBack}
-                        setupData={setupData}
-                    />
-                );
+                return <ExportConfig onNext={handleNext} onBack={handleBack} />;
             case 4:
-                return (
-                    <AppsScriptSetup
-                        onNext={handleNext}
-                        onBack={handleBack}
-                        setupData={setupData}
-                    />
-                );
-            case 5:
                 return <Done onFinish={handleFinish} />;
             default:
                 return <Connection onNext={handleNext} setupData={setupData} />;

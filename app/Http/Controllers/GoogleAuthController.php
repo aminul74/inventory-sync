@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class GoogleAuthController extends Controller
 {
@@ -35,6 +36,7 @@ class GoogleAuthController extends Controller
     public function handleGoogleCallback(GoogleCallbackRequest $request): RedirectResponse
     {
         if ($request->has('error')) {
+            Log::error('Google OAuth callback error 1: ' . $request->input('error'));
             return Redirect::to('/setup?error=auth_failed');
         }
 
@@ -51,6 +53,7 @@ class GoogleAuthController extends Controller
 
             return Redirect::to($this->googleHelper->redirectToShopifyAdmin());
         } catch (\Exception $e) {
+            Log::error('Google OAuth callback error 2: ' . $e->getMessage());
             return Redirect::to('/setup?error=auth_failed');
         }
     }

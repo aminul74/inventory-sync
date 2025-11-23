@@ -76,3 +76,76 @@ export const disconnectGoogleAccount = async () => {
         throw error;
     }
 };
+
+export const createSheet = async (data: {
+    url: string;
+    title: string;
+    option: string;
+}) => {
+    try {
+        const response = await fetch(`${API_BASE}/create-sheet`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error("Failed to create sheet");
+        return await response.json();
+    } catch (error) {
+        console.error("Create sheet error:", error);
+        throw error;
+    }
+};
+
+export const fetchProfile = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/profile`);
+        if (!response.ok) throw new Error("Failed to fetch profile");
+        return await response.json();
+    } catch (error) {
+        console.error("Fetch profile error:", error);
+        throw error;
+    }
+};
+
+export const exportProducts = async (fields?: string[]) => {
+    try {
+        const response = await fetch(`${API_BASE}/export-products`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fields }),
+        });
+        if (!response.ok) throw new Error("Failed to export products");
+        return await response.json();
+    } catch (error) {
+        console.error("Export products error:", error);
+        throw error;
+    }
+};
+
+export const importProducts = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/import-products`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to import products");
+        return await response.json();
+    } catch (error) {
+        console.error("Import products error:", error);
+        throw error;
+    }
+};
+
+export const syncProducts = async () => {
+    try {
+        const response = await fetch(`${API_BASE}/sync-products`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+        });
+        if (!response.ok) throw new Error("Failed to sync products");
+        return await response.json();
+    } catch (error) {
+        console.error("Sync products error:", error);
+        throw error;
+    }
+};

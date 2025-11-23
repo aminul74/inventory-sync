@@ -25,3 +25,11 @@ Route::middleware(['web'])->group(function () {
     Route::post('/auth/google/disconnect', [GoogleAuthController::class, 'disconnectGoogle'])->name('auth.google.disconnect');
     Route::post('/auth/google/refresh', [GoogleAuthController::class, 'refreshGoogleToken'])->name('auth.google.refresh');
 });
+
+Route::prefix('api')->middleware(['web', 'verify.shopify'])->group(function () {
+    Route::post('/create-sheet', [\App\Http\Controllers\SheetController::class, 'createSheet']);
+    Route::get('/profile', [\App\Http\Controllers\SheetController::class, 'profile']);
+    Route::post('/export-products', [\App\Http\Controllers\SheetController::class, 'exportProducts']);
+    Route::post('/import-products', [\App\Http\Controllers\SheetController::class, 'importProducts']);
+    Route::post('/sync-products', [\App\Http\Controllers\SheetController::class, 'syncProducts']);
+});

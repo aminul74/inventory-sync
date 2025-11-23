@@ -36,8 +36,9 @@ const Connection: React.FC<{
             setIsConnecting(true);
             const response = await fetch("/auth/google");
             const data = await response.json();
+            console.log("GOOGLE CONNECT RESPONSE ::", data);
             if (data.url) {
-                window.location.href = data.url;
+                window.open(data.url, "_top");
             }
         } catch (err) {
             console.error(err);
@@ -133,7 +134,46 @@ const Connection: React.FC<{
                         <Divider />
 
                         <Box padding="400">
-                            <div style={{ textAlign: "center" }}>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    gap: "12px",
+                                }}
+                            >
+                                <Button
+                                    variant="secondary"
+                                    tone="critical"
+                                    onClick={async () => {
+                                        try {
+                                            const response = await fetch(
+                                                "/auth/google/disconnect",
+                                                {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                        "X-CSRF-TOKEN":
+                                                            document
+                                                                .querySelector(
+                                                                    'meta[name="csrf-token"]'
+                                                                )
+                                                                ?.getAttribute(
+                                                                    "content"
+                                                                ) || "",
+                                                    },
+                                                }
+                                            );
+                                            if (response.ok) {
+                                                window.location.reload();
+                                            }
+                                        } catch (err) {
+                                            console.error(err);
+                                        }
+                                    }}
+                                >
+                                    Disconnect
+                                </Button>
                                 <Button
                                     variant="primary"
                                     onClick={onNext}

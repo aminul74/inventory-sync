@@ -46,4 +46,14 @@ class User extends Authenticatable implements IShopModel
             'email_verified_at' => 'datetime'
         ];
     }
+
+    public function googleUserInfo()
+    {
+        return $this->hasOne(GoogleUserInfo::class);
+    }
+
+    public function googleSheets()
+    {
+        return $this->hasMany(GoogleSheet::class);
+    }
 }

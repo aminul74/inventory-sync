@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Button,
     Card,
@@ -10,8 +10,10 @@ import {
     RadioButton,
     FormLayout,
     Divider,
+    Banner,
 } from "@shopify/polaris";
 import { ArrowRightIcon } from "@shopify/polaris-icons";
+import { createSheet, fetchProfile } from "../../services/api";
 
 interface SetupData {
     connectionStatus?: string;
@@ -31,29 +33,52 @@ const SpreadsheetSetup: React.FC<SpreadsheetSetupProps> = ({
     onBack,
     setupData,
 }) => {
-    const [setupType, setSetupType] = useState<"create" | "existing">("create");
+    const [setupType, setSetupType] = useState<"manual">("manual");
     const [spreadsheetUrl, setSpreadsheetUrl] = useState("");
-    const [sheetTitle, setSheetTitle] = useState("Sheet1");
+    const [sheetTitle, setSheetTitle] = useState("Products");
     const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [existingSheet, setExistingSheet] = useState<any>(null);
+
+    useEffect(() => {
+        loadProfile();
+    }, []);
+
+    const loadProfile = async () => {
+        try {
+            const result = await fetchProfile();
+            if (result.success && result.data?.profile?.sheet) {
+                setExistingSheet(result.data.profile.sheet);
+                setSpreadsheetUrl(result.data.profile.sheet.url);
+            }
+        } catch (err) {
+            console.error("Failed to load profile");
+        }
+    };
 
     const handleContinue = async () => {
+        if (!spreadsheetUrl.trim()) {
+            setError("Please enter a spreadsheet URL");
+            return;
+        }
+
         setIsSaving(true);
+        setError(null);
+
         try {
-            const response = await fetch("/api/setup/spreadsheet", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    setup_type: setupType,
-                    spreadsheet_url: spreadsheetUrl,
-                    sheet_title: sheetTitle,
-                }),
+            const result = await createSheet({
+                url: spreadsheetUrl,
+                title: sheetTitle,
+                option: setupType,
             });
 
-            if (response.ok) {
+            if (result.success) {
                 onNext();
+            } else {
+                setError(result.error || "Failed to create sheet");
             }
-        } catch (error) {
-            console.error("Failed to setup spreadsheet:", error);
+        } catch (err: any) {
+            setError(err.message || "Failed to setup spreadsheet");
         } finally {
             setIsSaving(false);
         }
@@ -65,72 +90,41 @@ const SpreadsheetSetup: React.FC<SpreadsheetSetupProps> = ({
                 <BlockStack gap="400">
                     <Box>
                         <Text variant="headingLg" as="h2">
-                            Choose Spreadsheet Setup
+                            Connect Spreadsheet
                         </Text>
                     </Box>
 
                     <Divider />
 
-                    <FormLayout>
-                        <Box padding="200">
-                            <InlineStack gap="300" align="start">
-                                <RadioButton
-                                    label="App Generated Spreadsheet"
-                                    id="create"
-                                    checked={setupType === "create"}
-                                    onChange={() => setSetupType("create")}
-                                />
-                                <Box>
-                                    <Text
-                                        as="p"
-                                        tone="subdued"
-                                        variant="bodySm"
-                                    >
-                                        Automatically create a new Google
-                                        Spreadsheet for you.
-                                    </Text>
-                                </Box>
-                            </InlineStack>
-                        </Box>
+                    {error && (
+                        <Banner
+                            tone="critical"
+                            onDismiss={() => setError(null)}
+                        >
+                            {error}
+                        </Banner>
+                    )}
 
-                        <Box padding="200">
-                            <InlineStack gap="300" align="start">
-                                <RadioButton
-                                    label="Use an Existing Spreadsheet"
-                                    id="existing"
-                                    checked={setupType === "existing"}
-                                    onChange={() => setSetupType("existing")}
-                                />
-                                <Box>
-                                    <Text
-                                        as="p"
-                                        tone="subdued"
-                                        variant="bodySm"
-                                    >
-                                        Link an existing spreadsheet by
-                                        providing its details.
-                                    </Text>
-                                </Box>
-                            </InlineStack>
-                        </Box>
-                    </FormLayout>
-
-                    {setupType === "existing" && (
-                        <FormLayout>
-                            <TextField
-                                label="Spreadsheet url"
-                                placeholder="Paste the URL of the Google Spreadsheet."
-                                value={spreadsheetUrl}
-                                onChange={setSpreadsheetUrl}
-                                autoComplete="off"
-                            />
-                        </FormLayout>
+                    {existingSheet && (
+                        <Banner tone="info">
+                            Sheet already connected: {existingSheet.url}
+                        </Banner>
                     )}
 
                     <FormLayout>
                         <TextField
-                            label="Sheet title"
-                            placeholder="Sheet1"
+                            label="Spreadsheet URL"
+                            placeholder="Paste the URL of the Google Spreadsheet"
+                            value={spreadsheetUrl}
+                            onChange={setSpreadsheetUrl}
+                            autoComplete="off"
+                        />
+                    </FormLayout>
+
+                    <FormLayout>
+                        <TextField
+                            label="Sheet Title"
+                            placeholder="Products"
                             value={sheetTitle}
                             onChange={setSheetTitle}
                             autoComplete="off"
@@ -154,7 +148,7 @@ const SpreadsheetSetup: React.FC<SpreadsheetSetupProps> = ({
                                 loading={isSaving}
                                 icon={<ArrowRightIcon />}
                             >
-                                Create & Continue
+                                Connect & Continue
                             </Button>
                         </div>
                     </Box>
