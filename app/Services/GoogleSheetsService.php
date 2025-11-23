@@ -104,6 +104,58 @@ class GoogleSheetsService
         }
     }
 
+    public function ensureProductsTabExists(string $sheetId, int $userId): bool
+    {
+        $accessToken = $this->getAccessToken($userId);
+        if (!$accessToken) {
+            return false;
+        }
+
+        try {
+            $metadata = $this->getSheetMetadata($sheetId, $userId);
+            if (!$metadata) {
+                return false;
+            }
+
+            $sheets = $metadata['sheets'] ?? [];
+            foreach ($sheets as $sheet) {
+                $title = $sheet['properties']['title'] ?? '';
+                if ($title === 'Products') {
+                    return true;
+                }
+            }
+
+            $this->client->post(self::SHEETS_API_BASE . "/{$sheetId}:batchUpdate", [
+                'headers' => [
+                    'Authorization' => "Bearer {$accessToken}",
+                    'Content-Type' => 'application/json',
+                ],
+                'json' => [
+                    'requests' => [
+                        [
+                            'addSheet' => [
+                                'properties' => [
+                                    'title' => 'Products',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+            Log::info('GoogleSheetsService: Products tab created');
+            return true;
+        } catch (\Exception $e) {
+            Log::error('GoogleSheetsService: Failed to create Products tab', [
+                'error' => $e->getMessage(),
+                'response' => $e instanceof \GuzzleHttp\Exception\RequestException && $e->hasResponse()
+                    ? $e->getResponse()->getBody()->getContents()
+                    : null
+            ]);
+            return false;
+        }
+    }
+
     public function appendToSheet(string $sheetId, string $range, array $values, int $userId): bool
     {
         $accessToken = $this->getAccessToken($userId);

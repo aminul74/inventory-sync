@@ -43,6 +43,8 @@ class SheetExportService
         $selectedFields = $fields ?? $defaultFields;
 
         try {
+            $this->googleSheetsService->ensureProductsTabExists($sheet->sheet_id, $user->id);
+
             $allProducts = $this->fetchAllProducts();
             Log::info('SheetExportService: Fetched products', ['count' => count($allProducts)]);
 
