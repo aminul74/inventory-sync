@@ -154,7 +154,7 @@ const ExportConfig: React.FC<ExportConfigProps> = ({ onNext, onBack }) => {
                             </Box>
                         </Card>
 
-                        <Card>
+                        {/* <Card>
                             <Box padding="400">
                                 <BlockStack gap="300">
                                     <Text variant="headingMd" as="h3">
@@ -175,7 +175,7 @@ const ExportConfig: React.FC<ExportConfigProps> = ({ onNext, onBack }) => {
                                     </Box>
                                 </BlockStack>
                             </Box>
-                        </Card>
+                        </Card> */}
 
                         <Card>
                             <Box padding="400">
