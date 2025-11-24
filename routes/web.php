@@ -27,9 +27,9 @@ Route::middleware(['web'])->group(function () {
 });
 
 Route::prefix('api')->middleware(['web', 'verify.shopify'])->group(function () {
-    Route::post('/create-sheet', [\App\Http\Controllers\SheetController::class, 'createSheet']);
+    Route::post('/create-sheet', [\App\Http\Controllers\SheetController::class, 'createSheet']); // Connect sheet
     Route::get('/profile', [\App\Http\Controllers\SheetController::class, 'profile']);
     Route::post('/export-products', [\App\Http\Controllers\SheetController::class, 'exportProducts']);
-    Route::post('/import-products', [\App\Http\Controllers\SheetController::class, 'importProducts']);
     Route::post('/sync-products', [\App\Http\Controllers\SheetController::class, 'syncProducts']);
+    Route::post('/import-products', [\App\Http\Controllers\SheetController::class, 'importProducts']);
 });
